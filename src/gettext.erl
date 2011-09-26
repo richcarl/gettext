@@ -27,6 +27,7 @@
 -export([parse_po/1, lc2lang/1,
 	 parse_po_bin/1, all_lang/0, 
 	 key2str/1, key2str/2, key2str/3, 
+	 key2str2/2, key2str2/3, key2str2/4,
 	 all_lcs/0, all_lcs/1,
 	 reload_custom_lang/1, reload_custom_lang/2,
 	 unload_custom_lang/1, unload_custom_lang/2,
@@ -67,6 +68,9 @@
 key2str(Key) -> 
     key2str(Key, get(gettext_language)).
 
+key2str2(Key, Alt) ->
+    key2str2(Key, Alt, get(gettext_language)).
+
 %% @doc Get the translation string for a key and a specific language
 %% and/or using a named gettext server. If no server is specified, the
 %% default server is used. If no language is specified, the current
@@ -80,6 +84,11 @@ key2str(Key, Lang) when is_list(Key) ->
 key2str(Server, Key) when is_atom(Server) ->
     key2str(Server, Key, get(gettext_language)).
 
+key2str2(Key, Alt, Lang) when is_list(Key) ->
+    key2str2(?DEFAULT_SERVER, Key, Alt, Lang);
+key2str2(Server, Key, Alt) when is_atom(Server) ->
+    key2str2(Server, Key, Alt, get(gettext_language)).
+
 %% @doc Get the translation string for a key and a specific language
 %% using the named gettext server.
 
@@ -87,6 +96,11 @@ key2str(_Server, Key, "a") ->
     a_language(Key);
 key2str(Server, Key, Lang) ->
     gen_server:call(Server, {key2str, Key, Lang}, infinity).
+
+key2str2(_Server, Key, _Alt, "a") ->
+    a_language(Key);
+key2str2(Server, Key, Alt, Lang) ->
+    gen_server:call(Server, {key2str, Key, Alt, Lang}, infinity).
 
 
 %%% --------------------------------------------------------------------

@@ -54,13 +54,13 @@ epot2po() ->
 
 write_entries(L) ->
     Fd = get(fd),
-    F = fun({Id,_Finfo}) ->
+    F = fun({Id,Str,_Finfo}) ->
 		%%Fi = fmt_fileinfo(Finfo),
 		%%io:format(Fd, "~n#: ~s~n", [Fi]),
 		file:write(Fd, "\nmsgid \"\"\n"),
 		write_pretty(Id),
 		file:write(Fd, "msgstr \"\"\n"),
-		write_pretty(Id)
+		write_pretty(Str)
 	end,
     lists:foreach(F, L).
 
@@ -236,17 +236,37 @@ pt([H|T],Opts,Func) when is_list(H) ->
 pt({call,L1,{remote,L2,{atom,L3,gettext},{atom,L4,key2str}},
     [{string,L5,String}]}, _Opts, _Func) ->
     ?debug( "++++++ String=<~p>~n",[String]),
-    dump(String, L5),
+    dump(String, String, L5),
     {call,L1,
      {remote,L2,
       {atom,L3,gettext},
       {atom,L4,key2str}},
      [{string,L5,String}]};
 %%%
+pt({call,L1,{remote,L2,{atom,L3,gettext},{atom,L4,key2str2}},
+    [{string,L5,String},{string,L6,AltString}]}, _Opts, _Func) ->
+    ?debug( "++++++ String=<~p>~n",[String]),
+    ?debug( "++++++ AltString=<~p>~n",[AltString]),
+    dump(String, AltString, L5),
+    dump(AltString, AltString, L6),
+    {call,L1,
+     {remote,L2,
+      {atom,L3,gettext},
+      {atom,L4,key2str2}},
+     [{string,L5,String},{string,L6,AltString}]};
+%%%
 pt([{call,_,{remote,_,{atom,_,gettext},{atom,_,key2str}},
     [{string,L5,String}]} = H | T], Opts, Func) ->
     ?debug( "++++++ String=<~p>~n",[String]),
-    dump(String, L5),
+    dump(String, String, L5),
+    [H | pt(T, Opts, Func)];
+%%%
+pt([{call,_,{remote,_,{atom,_,gettext},{atom,_,key2str2}},
+    [{string,L5,String},{string,L6,AltString}]} = H | T], Opts, Func) ->
+    ?debug( "++++++ String=<~p>~n",[String]),
+    ?debug( "++++++ AltString=<~p>~n",[AltString]),
+    dump(String, AltString, L5),
+    dump(AltString, AltString, L6),
     [H | pt(T, Opts, Func)];
 %%%
 pt([{attribute,_L,module,Mod} = H | T], Opts, Func) ->
@@ -289,16 +309,16 @@ while(0,T,_,_) ->
     T.
 
 
-dump("", _) -> ok;
-dump(Str,L) -> 
+dump("", _, _) -> ok;
+dump(Id,Str,L) ->
     Fname = get(fname),
-    Finfo = get_file_info(Str),
-    dets:insert(?EPOT_TABLE, {Str, [{Fname,L}|Finfo]}).
+    Finfo = get_file_info(Id),
+    dets:insert(?EPOT_TABLE, {Id, Str, [{Fname,L}|Finfo]}).
 
 get_file_info(Key) ->
     case dets:lookup(?EPOT_TABLE, Key) of
 	[]            -> [];
-	[{_,Finfo}|_] -> Finfo
+	[{_,_,Finfo}|_] -> Finfo
     end.
 
 open_epot_file(Gettext_App_Name, GtxtDir) ->

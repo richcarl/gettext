@@ -187,6 +187,11 @@ handle_call({key2str, Key, Lang}, _From, State) ->
     Reply = lookup(TableName, Lang, Key),
     {reply, Reply, State};
 %%
+handle_call({key2str, Key, Alt, Lang}, _From, State) ->
+    TableName = State#state.table_name,
+    Reply = lookup(TableName, Lang, Key, Alt),
+    {reply, Reply, State};
+%%
 handle_call({lang2cset, Lang}, _From, State) ->
     Reply = case lists:keysearch(Lang, #cache.language, State#state.cache) of
 		false      -> {error, "not found"};
@@ -494,6 +499,18 @@ lookup(TableName, Lang, Key) ->
         _:_ ->
 	    case dets:lookup(TableName, ?KEY(Lang, Key)) of
 		[]          -> Key;  
+		[?ENTRY(_,_,Str)|_] -> Str
+	    end
+    end.
+
+lookup(TableName, Lang, Key, Alt) ->
+    try ets:lookup(get(ets_table), ?KEY(Lang, Key)) of
+	[]          -> lookup(TableName, Lang, Alt);
+	[?ENTRY(_,_,Str)|_] -> Str
+    catch
+        _:_ ->
+	    case dets:lookup(TableName, ?KEY(Lang, Key)) of
+		[]          -> lookup(TableName, Lang, Key);
 		[?ENTRY(_,_,Str)|_] -> Str
 	    end
     end.
